@@ -44,8 +44,3 @@ steps:
 #     awsCommand: 'ecs'
 #     awsSubCommand: 'run-task --task-definition terraform-ecs-pipeline-test --cluster terraform-ecs-pipeline-test --network-configuration "awsvpcConfiguration={subnets=[subnet-64961b3b],securityGroups=[sg-0911b580c7b165bda],assignPublicIp=ENABLED}" --launch-type "FARGATE"'
 
-module "ecs" {
-  source  = "terraform-aws-modules/ecs/aws"
-  version = "3.2.0"
-  # insert the 1 required variable here
-}
