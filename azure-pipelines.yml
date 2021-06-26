@@ -24,17 +24,17 @@ steps:
   inputs:
     terraformVersion: 'latest'
 
-# - task: TerraformCLI@0
-#   displayName: terraform init
-#   inputs:
-#     command: 'init'
-#     backendType: 'azurerm'
-#     backendServiceArm: 'Azure subscription 1(460df987-2f72-4f07-a245-a314971fba99)'
-#     backendAzureRmResourceGroupName: 'terraform_ecs_pipeline'
-#     backendAzureRmStorageAccountName: 'terraformecspipeline_1624689226084'
-#     backendAzureRmContainerName: 'containerNamee'
-#     allowTelemetryCollection: false
-#     backendAzureRmKey: '$(tfstateFile)'
+- task: TerraformCLI@0
+  displayName: terraform init
+  inputs:
+    command: 'init'
+    backendType: 'azurerm'
+    backendServiceArm: 'Azure subscription 1(460df987-2f72-4f07-a245-a314971fba99)'
+    backendAzureRmResourceGroupName: 'terraform_ecs_pipeline'
+    backendAzureRmStorageAccountName: 'terraformecspipeline_1624689226084'
+    backendAzureRmContainerName: 'containerNamee'
+    allowTelemetryCollection: false
+    backendAzureRmKey: '$(tfstateFile)'
 
 # Works. But isn't what was requested.
 # - task: AWSCLI@1
