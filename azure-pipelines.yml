@@ -4,12 +4,12 @@
 # https://aka.ms/yaml
 
 variables:
-  subscription: Visual Studio Enterprise(17b12858-3960-4e6f-a663-a06fdae23428)
   resourceGroup: resourcegroup-tfstate
   storageAccount: terraformtfstateskip
   container: tfstate
   tfstateFile: terraform.tfstate
   anyTfChanges: false
+  # add vars
 
 trigger:
 - master
@@ -36,6 +36,18 @@ steps:
     allowTelemetryCollection: false
     backendAzureRmKey: '$(tfstateFile)'
 
+- task: TerraformCLI@1
+  displayName: terraform apply
+  inputs:
+    command: 'apply'
+    backendType: 'azurerm'
+    backendServiceArm: 'Azure subscription 1(460df987-2f72-4f07-a245-a314971fba90)'
+    backendAzureRmResourceGroupName: 'terraform_ecs_pipeline'
+    backendAzureRmStorageAccountName: 'terraformecspipeline_1624689226084'
+    backendAzureRmContainerName: 'containerNamee'
+    allowTelemetryCollection: false
+    backendAzureRmKey: '$(tfstateFile)'
+
 # Works. But isn't what was requested.
 # - task: AWSCLI@1
 #   inputs:
@@ -43,4 +55,3 @@ steps:
 #     regionName: 'us-east-1'
 #     awsCommand: 'ecs'
 #     awsSubCommand: 'run-task --task-definition terraform-ecs-pipeline-test --cluster terraform-ecs-pipeline-test --network-configuration "awsvpcConfiguration={subnets=[subnet-64961b3b],securityGroups=[sg-0911b580c7b165bda],assignPublicIp=ENABLED}" --launch-type "FARGATE"'
-

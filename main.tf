@@ -1,67 +1,101 @@
-terraform {
-  required_providers {
-    aws = {
-      source = "hashicorp/aws"
-      version = "3.47.0"
-    }
-  }
-}
-
 provider "aws" {
-  # Configuration options
+  region = "us-east-1"
 }
 
-# Used to create cluster
-module "ecs" {
-  source  = "terraform-aws-modules/ecs/aws"
-  version = "3.2.0"
-  # insert the 1 required variable here
-  capacity_providers = ["FARGATE", "FARGATE_SPOT"]
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 1.26.0"
+
+  name               = "ecs-alb-single-svc"
+  cidr               = "10.10.10.0/24"
+  azs                = ["us-east-1a", "us-east-1b", "us-east-1c"]
+  private_subnets    = ["10.10.10.0/27", "10.10.10.32/27", "10.10.10.64/27"]
+  public_subnets     = ["10.10.10.96/27", "10.10.10.128/27", "10.10.10.160/27"]
+  enable_nat_gateway = true
+  single_nat_gateway = true
+
   tags = {
-    Environment = "Development"
+    Owner       = "user"
+    Environment = "me"
   }
 }
 
-# Containers
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_task_definition
-resource "aws_ecs_task_definition" "service" {
-  family = "service"
-  container_definitions = jsonencode([
-    {
-      name      = "first"
-      image     = "nginx:latest"
-      cpu       = 0.5
-      memory    = 512
-      essential = true
-      portMappings = [
-        {
-          containerPort = 8000
-          hostPort      = 8000
-        }
-      ]
-    },
-    {
-      name      = "second"
-      image     = "nginx:latest"
-      cpu       = 0.5
-      memory    = 256
-      essential = true
-      portMappings = [
-        {
-          containerPort = 8000
-          hostPort      = 8000
-        }
-      ]
-    }
-  ])
+module "ecs_cluster" {
+  source = "anrim/ecs/aws//modules/cluster"
 
-  volume {
-    name      = "service-storage"
-    host_path = "/ecs/service-storage"
+  name        = "ecs-alb-single-svc"
+  vpc_id      = "${module.vpc.vpc_id}"
+  vpc_subnets = ["${module.vpc.private_subnets}"]
+
+  tags = {
+    Owner       = "user"
+    Environment = "me"
+  }
+}
+
+module "alb" {
+  source = "anrim/ecs/aws//modules/alb"
+
+  name                     = "ecs-alb-single-svc"
+  host_name                = "app"
+  domain_name              = "example.com"
+  certificate_arn          = "arn:aws:iam::123456789012:server-certificate/test_cert-123456789012"
+  backend_sg_id            = "${module.ecs_cluster.instance_sg_id}"
+  create_log_bucket        = true
+  enable_logging           = true
+  force_destroy_log_bucket = true
+  log_bucket_name          = "ecs-alb-single-svc-logs"
+
+  tags = {
+    Owner       = "user"
+    Environment = "me"
   }
 
-  placement_constraints {
-    type       = "memberOf"
-    expression = "attribute:ecs.availability-zone in [us-west-2a, us-west-2b]"
+  vpc_id      = "${module.vpc.vpc_id}"
+  vpc_subnets = ["${module.vpc.public_subnets}"]
+}
+
+resource "aws_ecs_task_definition" "app" {
+  family = "ecs-alb-single-svc"
+
+  container_definitions = <<EOF
+[
+  {
+    "name": "nginx",
+    "image": "nginx:1.13-alpine",
+    "essential": true,
+    "portMappings": [
+      {
+        "containerPort": 80
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "ecs-alb-single-svc-nginx",
+        "awslogs-region": "us-east-1"
+      }
+    },
+    "memory": 128,
+    "cpu": 100
+  }
+]
+EOF
+}
+
+module "ecs_service_app" {
+  source = "anrim/ecs/aws//modules/service"
+
+  name                 = "ecs-alb-single-svc"
+  alb_target_group_arn = "${module.alb.target_group_arn}"
+  cluster              = "${module.ecs_cluster.cluster_id}"
+  container_name       = "nginx"
+  container_port       = "80"
+  log_groups           = ["ecs-alb-single-svc-nginx"]
+  task_definition_arn  = "${aws_ecs_task_definition.app.arn}"
+
+  tags = {
+    Owner       = "user"
+    Environment = "me"
   }
 }
