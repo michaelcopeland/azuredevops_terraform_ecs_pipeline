@@ -2,6 +2,12 @@ provider "aws" {
   region = "us-east-1"
 }
 
+module "ecs" {
+  source  = "terraform-aws-modules/ecs/aws"
+  version = "3.3.0"
+  # insert the 1 required variable here
+}
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 1.26.0"
